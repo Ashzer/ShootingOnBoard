@@ -3,7 +3,16 @@ guid: 40b077d3d3e490a4a963bedb001e4d1d
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - _aim: {instanceID: 0}
+  - _fireButton: {instanceID: 0}
+  - _canButton: {instanceID: 0}
+  - _redScoreText: {instanceID: 0}
+  - _blueScoreText: {instanceID: 0}
+  - _resultText: {instanceID: 0}
+  - _gauge: {instanceID: 0}
+  - _gaugeBackground: {instanceID: 0}
+  - _currentState: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

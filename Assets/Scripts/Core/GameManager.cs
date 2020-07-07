@@ -10,6 +10,8 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
 {
     public class GameManager : MonoBehaviour
     {
+        #region Variables
+
         public static GameState state;
 
         [SerializeField] private ISelectionResponse _selectionResponse;
@@ -21,27 +23,28 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
         [SerializeField] private Text _resultText;
         [SerializeField] private Image _gauge;
         [SerializeField] private Image _gaugeBackground;
-
+        [SerializeField] private Text _currentState;
         private ISelector _selector;
         private IRayProvider _rayProvider;
 
-        public static Transform _currentSelection;
+        private Transform _currentSelection;
 
         private Transform _mainCamTransform;
         
-        
         private LineRenderer _aimRenderer;
         private GameObject _aimContainer;
-        public static Vector3 _aimDirection;
+        private Vector3 _aimDirection;
         
-
         private static int _blueScore;
         private static int _redScore;
-
-        
+        private GameObject[] _bluePiecesContainers;
+        private GameObject[] _redPiecesContainers;
 
         private const float WaitingTime = 1.5f;
         private float _timer;
+
+        private bool _stoppingCheck;
+        #endregion
 
         private void Awake()
         {
@@ -60,33 +63,25 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
             _blueScore = 0;
             _redScore = 0;
             _timer = 0f;
+            _stoppingCheck = false;
+            _redScore = GameObject.FindGameObjectsWithTag("Red Pieces").Length;
+            _blueScore = GameObject.FindGameObjectsWithTag("Blue Pieces").Length;
+        
             _redScoreText.text = _redScore.ToString();
             _blueScoreText.text = _blueScore.ToString();
-            //Debug.Log($"Start {_redScore}");
-            //Debug.Log($"Start {_blueScore}");
         }
 
-        public Transform GetSelection()
-        {
-            return _currentSelection;
-        }
 
-        public Vector3 GetAimDirection()
-        {
-            return _aimDirection;
-        }
         public void FirePiece()
         {
             SetFireInterfaces(false);
             switch (state)
             {
                 case GameState.RedTeamFire:
-                    state = GameState.PauseFromRedToBlue;
-                    //state = GameState.BlueTeamSelection;
+                    state = GameState.FromRedToBlue;
                     break;
                 case GameState.BlueTeamFire:
-                    state = GameState.PauseFromBlueToRed;
-                    //state = GameState.RedTeamSelection;
+                    state = GameState.FromBlueToRed;
                     break;
             }
             _selectionResponse.OnDeselect(_currentSelection);
@@ -95,31 +90,30 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
         
         private void Update()
         {
+            var hasEveryStopped = true;
+            
             switch (state)
             {
                 case GameState.Begin:
+                    _currentState.text = "Begin state";
                     state = GameState.RedTeamSelection;
                     break;
 
                 case GameState.RedTeamSelection:
+                    _currentState.text = "RedTeam Selection";
                     SetFireInterfaces(false);
 
                     if (_currentSelection != null)
                     {
                         _selectionResponse.OnDeselect(_currentSelection);
                         Destroy(_aimContainer.gameObject);
-                        //_mainCamTransform.position = _mainCamOriginPosition;
-                        //_mainCamTransform.rotation = _mainCamOriginRotation;
                     }
 
-                    if (Input.GetMouseButtonDown(0))
+                    if (Input.touchCount > 0)
                     {
                         _selector.Check(_rayProvider.CreateRay(), "Red Pieces");
                         
                         _currentSelection = _selector.GetSelection();
-
-                        //_mainCamTransform.position = _mainCamOriginPosition;
-                        //_mainCamTransform.rotation = _mainCamOriginRotation;
                         if (_currentSelection != null)
                         {
                             _selectionResponse.OnSelect(_currentSelection);
@@ -132,45 +126,25 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
                     break;
 
                 case GameState.RedTeamFire:
+                    _currentState.text = "RedTeam Fire";
                     SetFireInterfaces(true);
-                    if (_currentSelection != null)
-                    {
-                        //_aimDirection = (_currentSelection.position - Camera.main.GetComponent<Transform>().position).normalized * 3;
-                        //_aimDirection.y = 0;
-                        //_aimRenderer.SetPosition(1, _aimDirection);
-                        //RotateCameraAroundTransform(_currentSelection);
-                        //mainCamTransform.RotateAround(currentSelection.transform.position, Vector3.up, 0.1f);
-                    }
-
-                    break;
-                case GameState.PauseFromRedToBlue:
-                    _timer += Time.deltaTime;
-                    if (_timer > WaitingTime)
-                    {
-                        state = GameState.BlueTeamSelection;
-                        _timer = 0;
-                    }
                     break;
 
                 case GameState.BlueTeamSelection:
+                    _currentState.text = "BlueTeam Selection";
                     SetFireInterfaces(false);
 
                     if (_currentSelection != null)
                     {
                         _selectionResponse.OnDeselect(_currentSelection);
                         Destroy(_aimContainer.gameObject);
-                        //_mainCamTransform.position = _mainCamOriginPosition;
-                        //_mainCamTransform.rotation = _mainCamOriginRotation;
                     }
 
-                    if (Input.GetMouseButtonDown(0))
+                    if (Input.touchCount > 0)
                     {
                         _selector.Check(_rayProvider.CreateRay(), "Blue Pieces");
 
                         _currentSelection = _selector.GetSelection();
-
-                        //_mainCamTransform.position = _mainCamOriginPosition;
-                        //_mainCamTransform.rotation = _mainCamOriginRotation;
 
                         if (_currentSelection != null)
                         {
@@ -184,55 +158,129 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
                     break;
 
                 case GameState.BlueTeamFire:
-
+                    _currentState.text = "BlueTeam Fire";
                     SetFireInterfaces(true);
-
-                    if (_currentSelection != null)
-                    {
-                        // _aimDirection = (_currentSelection.position - Camera.main.GetComponent<Transform>().position).normalized * 3;
-                        // _aimDirection.y = 0;
-                        // _aimRenderer.SetPosition(1, _aimDirection);
-                        //RotateCameraAroundTransform(_currentSelection);
-                        //mainCamTransform.RotateAround(currentSelection.transform.position, Vector3.up, 0.1f);
-                    }
                     break;
 
-                case GameState.PauseFromBlueToRed:
-                    _timer += Time.deltaTime;
-                    if (_timer > WaitingTime)
+                case GameState.FromRedToBlue:
+                    _currentState.text = "Red to Blue";
+
+                    _bluePiecesContainers = GameObject.FindGameObjectsWithTag("Blue Pieces");
+                    _redPiecesContainers = GameObject.FindGameObjectsWithTag("Red Pieces");
+
+                    foreach (var piece in _bluePiecesContainers)
                     {
-                        state = GameState.RedTeamSelection;
-                        _timer = 0;
+                        //Debug.Log($"{piece.tag} is Moving with {piece.GetComponent<Rigidbody>().velocity.magnitude}");
+                        if (piece.GetComponent<Rigidbody>().velocity != new Vector3(0, 0, 0))
+                        {
+                            hasEveryStopped = false;
+                        }
                     }
+
+                    foreach (var piece in _redPiecesContainers)
+                    {
+                        //Debug.Log($"{piece.tag} is Moving with {piece.GetComponent<Rigidbody>().velocity.magnitude}");
+                        if (piece.GetComponent<Rigidbody>().velocity != new Vector3(0, 0, 0))
+                        {
+                            hasEveryStopped = false;
+                        }
+                    }
+
+                    if (!hasEveryStopped) _stoppingCheck = true;
+                    if (_stoppingCheck == false) return;
+
+                    //Debug.Log("from Red to Blue : Moving");
+                    if (hasEveryStopped)
+                    {
+                        //Debug.Log("from Red to Blue : All Stopped");
+                        _redScore = GameObject.FindGameObjectsWithTag("Red Pieces").Length;
+                        _blueScore = GameObject.FindGameObjectsWithTag("Blue Pieces").Length;
+
+                        GetFinishState();
+
+                        _stoppingCheck = false;
+                    }
+                    //_redScore = redPieces.Length;
+                    //_blueScore = bluePieces.Length;
+                    break;
+
+                case GameState.FromBlueToRed:
+                    _currentState.text = "Blue to Red";
+
+                    _bluePiecesContainers = GameObject.FindGameObjectsWithTag("Blue Pieces");
+                    _redPiecesContainers = GameObject.FindGameObjectsWithTag("Red Pieces");
+
+                    foreach (var piece in _bluePiecesContainers)
+                    {
+                        //Debug.Log($"{piece.tag} is Moving with {piece.GetComponent<Rigidbody>().velocity.magnitude}");
+                        if (piece.GetComponent<Rigidbody>().velocity != new Vector3(0, 0, 0))
+                        {
+                            hasEveryStopped = false;
+                            break;
+                        }
+                    }
+
+                    foreach (var piece in _redPiecesContainers)
+                    {
+                        //Debug.Log($"{piece.tag} is Moving with {piece.GetComponent<Rigidbody>().velocity.magnitude}");
+                        if (piece.GetComponent<Rigidbody>().velocity != new Vector3(0, 0, 0))
+                        {
+                            hasEveryStopped = false;
+                            break;
+                        }
+                    }
+
+                    if (!hasEveryStopped) _stoppingCheck = true;
+                    if (_stoppingCheck == false) return;
+
+                    //Debug.Log("from Blue to Red : Moving");
+                    if (hasEveryStopped)
+                    {
+                        //Debug.Log("from Blue to Red : All Stopped");
+                        _redScore = GameObject.FindGameObjectsWithTag("Red Pieces").Length;
+                        _blueScore = GameObject.FindGameObjectsWithTag("Blue Pieces").Length;
+
+                        GetFinishState();
+
+                        _stoppingCheck = false;
+                    }
+
+                    //_redScore = redPieces.Length;
+                    //_blueScore = bluePieces.Length;
                     break;
 
                 case GameState.RedTeamWon:
-                    state = GameState.End;
+                    _currentState.text = "Red won";
+                    state = GameState.EndOfGame;
                     _resultText.text = "Red team won!";
                     _resultText.gameObject.SetActive(true);
                     Debug.Log("Red team won!");
                     break;
 
                 case GameState.BlueTeamWon:
-                    state = GameState.End;
+                    _currentState.text = "Blue won";
+                    state = GameState.EndOfGame;
                     _resultText.text = "Blue team won!";
                     _resultText.gameObject.SetActive(true);
                     Debug.Log("Blue team won!");
                     break;
 
                 case GameState.Draw:
-                    state = GameState.End;
+                    _currentState.text = "Draw";
+                    state = GameState.EndOfGame;
                     _resultText.text = "Draw!";
                     _resultText.gameObject.SetActive(true);
                     Debug.Log("Draw!");
                     break;
 
-                case GameState.End:
-                    Debug.Log("End!");
+                case GameState.EndOfGame:
+                    _currentState.text = "EndOfGame";
                     break;
+
                 default:
                     break;
             }
+
         }
 
         private void LateUpdate()
@@ -242,33 +290,41 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
                 _aimDirection = (_currentSelection.position - Camera.main.GetComponent<Transform>().position);
                 _aimDirection.y = 0;
                 _aimDirection = _aimDirection.normalized * 3;
-                
-                _aimRenderer.SetPosition(1, _aimDirection);
-                //if (Input.GetMouseButton(0))
-                if( Input.touchCount > 0 && !FireButton._buttonPressed)
+
+                if (_aimRenderer != null) _aimRenderer.SetPosition(1, _aimDirection);
+
+                if (Input.touchCount > 0 && !FireButton._buttonPressed)
                 {
                     RotateCameraAroundTransform(_currentSelection);
                 }
             }
-            var redPieces = GameObject.FindGameObjectsWithTag("Red Pieces").Length;
-            var bluePieces = GameObject.FindGameObjectsWithTag("Blue Pieces").Length;
-            _redScoreText.text = redPieces.ToString();
-            _blueScoreText.text = bluePieces.ToString();
 
-            if (state != GameState.PauseFromBlueToRed && state != GameState.PauseFromRedToBlue)
+            _redScore = GameObject.FindGameObjectsWithTag("Red Pieces").Length;
+            _blueScore = GameObject.FindGameObjectsWithTag("Blue Pieces").Length;
+
+            _redScoreText.text = _redScore.ToString();
+            _blueScoreText.text = _blueScore.ToString();
+        }
+
+        private static void GetFinishState()
+        {
+            if (_redScore == 0 && _blueScore == 0)
             {
-                if (redPieces == 0 && bluePieces == 0)
-                {
-                    state = GameState.Draw;
-                }
-                else if (redPieces == 0)
-                {
-                    state = GameState.BlueTeamWon;
-                }
-                else if (bluePieces == 0)
-                {
-                    state = GameState.RedTeamWon;
-                }
+                state = GameState.Draw;
+            }
+            else if (_redScore == 0)
+            {
+                state = GameState.BlueTeamWon;
+            }
+            else if (_blueScore == 0)
+            {
+                state = GameState.RedTeamWon;
+            }
+            else
+            {
+                state = (state == GameState.FromBlueToRed)
+                    ? GameState.RedTeamSelection
+                    : GameState.BlueTeamSelection;
             }
         }
 
@@ -278,7 +334,6 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
             _mainCamTransform.RotateAround(_currentSelection.position, Vector3.up, touch.deltaPosition.x / 2);
         }
 
-
         private void SetFireInterfaces(bool visibility)
         {
             _fireButton.gameObject.SetActive(visibility);
@@ -286,5 +341,16 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
             _gauge.gameObject.SetActive(visibility);
             _gaugeBackground.gameObject.SetActive(visibility);
         }
+
+        public Transform GetSelection()
+        {
+            return _currentSelection;
+        }
+
+        public Vector3 GetAimDirection()
+        {
+            return _aimDirection;
+        }
+
     }
 }

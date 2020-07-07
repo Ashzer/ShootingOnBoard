@@ -10,8 +10,8 @@
         RedTeamWon,
         BlueTeamWon,
         Draw,
-        PauseFromRedToBlue,
-        PauseFromBlueToRed,
-        End
+        FromRedToBlue,
+        FromBlueToRed,
+        EndOfGame
     }
 }
