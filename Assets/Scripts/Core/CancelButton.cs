@@ -3,9 +3,9 @@ using UnityEngine.EventSystems;
 
 namespace DevJJ.Entertainment.Assets.Scripts.Core
 {
-    public class CancelButton : MonoBehaviour, IPointerUpHandler
+    public class CancelButton : MonoBehaviour, IPointerDownHandler
     {
-        public void OnPointerUp(PointerEventData eventData)
+        public void OnPointerDown(PointerEventData eventData)
         {
             if (FireButton._buttonPressed) return;
             switch (GameManager.state)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Resources;
 using System.Runtime.CompilerServices;
 using UnityEditor;
@@ -24,6 +25,11 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
         [SerializeField] private Image _gauge;
         [SerializeField] private Image _gaugeBackground;
         [SerializeField] private Text _currentState;
+        [SerializeField] private GameObject _redContainer;
+        [SerializeField] private GameObject _blueContainer;
+        [SerializeField] private GameObject _redPiece;
+        [SerializeField] private GameObject _bluePiece;
+
         private ISelector _selector;
         private IRayProvider _rayProvider;
 
@@ -44,6 +50,8 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
         private float _timer;
 
         private bool _stoppingCheck;
+
+        private GameObject _board;
         #endregion
 
         private void Awake()
@@ -69,6 +77,8 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
         
             _redScoreText.text = _redScore.ToString();
             _blueScoreText.text = _blueScore.ToString();
+
+            _board = GameObject.FindGameObjectWithTag("Board");
         }
 
 
@@ -96,6 +106,8 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
             {
                 case GameState.Begin:
                     _currentState.text = "Begin state";
+                    _resultText.gameObject.SetActive(false);
+                    InitializeGame();
                     state = GameState.RedTeamSelection;
                     break;
 
@@ -103,11 +115,12 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
                     _currentState.text = "RedTeam Selection";
                     SetFireInterfaces(false);
 
+                    /*
                     if (_currentSelection != null)
                     {
                         _selectionResponse.OnDeselect(_currentSelection);
                         Destroy(_aimContainer.gameObject);
-                    }
+                    }*/
 
                     if (Input.touchCount > 0)
                     {
@@ -134,11 +147,12 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
                     _currentState.text = "BlueTeam Selection";
                     SetFireInterfaces(false);
 
+                    /*
                     if (_currentSelection != null)
                     {
                         _selectionResponse.OnDeselect(_currentSelection);
                         Destroy(_aimContainer.gameObject);
-                    }
+                    }*/
 
                     if (Input.touchCount > 0)
                     {
@@ -255,6 +269,7 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
                     _resultText.text = "Red team won!";
                     _resultText.gameObject.SetActive(true);
                     Debug.Log("Red team won!");
+                    //InitializeGame(_board, 10, 10);
                     break;
 
                 case GameState.BlueTeamWon:
@@ -263,6 +278,7 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
                     _resultText.text = "Blue team won!";
                     _resultText.gameObject.SetActive(true);
                     Debug.Log("Blue team won!");
+                    //InitializeGame(_board, 10, 10);
                     break;
 
                 case GameState.Draw:
@@ -271,6 +287,7 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
                     _resultText.text = "Draw!";
                     _resultText.gameObject.SetActive(true);
                     Debug.Log("Draw!");
+                    //InitializeGame(_board,10,10);
                     break;
 
                 case GameState.EndOfGame:
@@ -352,5 +369,29 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
             return _aimDirection;
         }
 
+        public void InitializeGame()
+        {
+            int[,] piecesInitLocation =new int[10,2]{{2,4},{8,4},{12,4},{18,4},{2,8},{8,8},{12,8},{18,8},{5,6},{15,6}}; 
+
+            foreach (var child in _blueContainer.GetComponentsInChildren<Transform>())
+            {
+                if (child.name == _blueContainer.name) continue;
+                Destroy(child.gameObject);
+            }
+
+            foreach (var child in _redContainer.GetComponentsInChildren<Transform>())
+            {
+                if (child.name == _redContainer.name) continue;
+                Destroy(child.gameObject);
+            }
+
+            
+            for (var i = 0; i < piecesInitLocation.GetLength(0) ; i++)
+            {
+                Instantiate(_redPiece, _redContainer.transform.position + (new Vector3(piecesInitLocation[i,0], 0, -piecesInitLocation[i,1])), Quaternion.identity, _redContainer.transform);
+                Instantiate(_bluePiece, _blueContainer.transform.position + (new Vector3(piecesInitLocation[i, 0], 0, piecesInitLocation[i, 1])), Quaternion.identity, _blueContainer.transform);
+            }
+            
+        }
     }
 }
