@@ -1,20 +1,20 @@
 ﻿using UnityEngine;
 using UnityEngine.EventSystems;
 
-namespace DevJJ.Entertainment.Assets.Scripts.Core
+namespace DevJJ.Entertainment.Assets.Scripts
 {
     public class CancelButton : MonoBehaviour, IPointerDownHandler
     {
         public void OnPointerDown(PointerEventData eventData)
         {
             if (FireButton._buttonPressed) return;
-            switch (GameManager.state)
+            switch (GameManager.State)
             {
                 case GameState.BlueTeamFire:
-                    GameManager.state = GameState.BlueTeamSelection;
+                    GameManager.State = GameState.BlueTeamSelection;
                     break;
                 case GameState.RedTeamFire:
-                    GameManager.state = GameState.RedTeamSelection;
+                    GameManager.State = GameState.RedTeamSelection;
                     break;
             }
         }

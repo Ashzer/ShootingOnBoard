@@ -1,7 +1,6 @@
-﻿using System.Linq;
-using UnityEngine;
+﻿using UnityEngine;
 
-namespace DevJJ.Entertainment.Assets.Scripts.Core
+namespace DevJJ.Entertainment.Assets.Scripts
 {
     public class RayCastBasedTagSelector : MonoBehaviour, ISelector
     {

@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace DevJJ.Entertainment.Assets.Scripts.Core
+namespace DevJJ.Entertainment.Assets.Scripts
 {
     class TouchScreenRayProvider : MonoBehaviour, IRayProvider
     {

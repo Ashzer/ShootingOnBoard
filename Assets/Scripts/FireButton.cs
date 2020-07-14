@@ -2,7 +2,7 @@
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace DevJJ.Entertainment.Assets.Scripts.Core
+namespace DevJJ.Entertainment.Assets.Scripts
 {
     public class FireButton : MonoBehaviour , IPointerDownHandler, IPointerUpHandler
     {
@@ -38,8 +38,6 @@ namespace DevJJ.Entertainment.Assets.Scripts.Core
                     _timePressed -= Time.deltaTime;
                     if (_timePressed < 0) _isIncreasing = true;
                 }
-
-               
                 //Debug.Log(_timePressed);
             }
         }

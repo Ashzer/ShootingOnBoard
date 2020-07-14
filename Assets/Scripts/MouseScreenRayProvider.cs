@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace DevJJ.Entertainment.Assets.Scripts.Core
+namespace DevJJ.Entertainment.Assets.Scripts
 {
     public class MouseScreenRayProvider : MonoBehaviour, IRayProvider
     {
