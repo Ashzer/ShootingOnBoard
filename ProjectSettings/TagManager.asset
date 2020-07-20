@@ -15,6 +15,7 @@ TagManager:
   - BlueScore
   - RedScore
   - Falling Piece
+  - FireCamera
   layers:
   - Default
   - TransparentFX

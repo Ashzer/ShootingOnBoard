@@ -10,6 +10,7 @@ namespace DevJJ.Entertainment.Assets.Scripts
         #region Variables
 
         private GameMode _gameMode;
+        private CameraController _cameraController;
         public static GameState State;
 
         [SerializeField] private ISelectionResponse _selectionResponse;
@@ -24,16 +25,14 @@ namespace DevJJ.Entertainment.Assets.Scripts
         [SerializeField] private Text _currentState;
         [SerializeField] private GameObject _redContainer;
         [SerializeField] private GameObject _blueContainer;
-        [SerializeField] private GameObject _redPiece;
-        [SerializeField] private GameObject _bluePiece;
 
         private ISelector _selector;
         private IRayProvider _rayProvider;
+        private IGameInitializer _gameInitializer;
 
         private Transform _currentSelection;
         private Transform _currentTarget;
-
-        private Transform _mainCamTransform;
+        
 
         private LineRenderer _aimRenderer;
         private GameObject _aimContainer;
@@ -45,12 +44,12 @@ namespace DevJJ.Entertainment.Assets.Scripts
         private GameObject[] _redPiecesContainers;
         private string _redPieceTag;
         private string _bluePieceTag;
-
-        private const float WaitingTime = 1.5f;
+        
 
         private bool _stoppingCheck;
-
+        private readonly ExitFireMode _exitFireMode = new ExitFireMode();
         private GameObject _board;
+
         #endregion
 
         private void Awake()
@@ -58,12 +57,14 @@ namespace DevJJ.Entertainment.Assets.Scripts
             _rayProvider = GetComponent<IRayProvider>();
             _selector = GetComponent<ISelector>();
             _selectionResponse = GetComponent<ISelectionResponse>();
-            _mainCamTransform = Camera.main.GetComponent<Transform>();
-            _gameMode = GameModeController.Instance.GetGameMode();
+            _gameInitializer = GetComponent<IGameInitializer>();
         }
 
         private void Start()
         {
+            _gameMode = GameModeController.Instance.GetGameMode();
+            _cameraController = CameraController.Instance;
+
             State = GameState.Begin;
 
             SetFireInterfaces(false);
@@ -110,7 +111,7 @@ namespace DevJJ.Entertainment.Assets.Scripts
                 case GameState.Begin:
                     _currentState.text = "Begin state";
                     _resultText.gameObject.SetActive(false);
-                    InitializeGame();
+                    _gameInitializer.InitializeGame();
                     State = GameState.RedTeamSelection;
                     break;
 
@@ -118,12 +119,80 @@ namespace DevJJ.Entertainment.Assets.Scripts
                 case GameState.RedTeamSelection:
                     _currentState.text = "RedTeam Selection";
                     SetFireInterfaces(false);
-                    PieceSelectionByPlayer(_redPieceTag);
+
+                    if (_currentSelection != null)
+                    {
+                        _selectionResponse.OnDeselect(_currentSelection);
+                        Destroy(_aimContainer.gameObject);
+                    }
+
+                    if (Input.touchCount > 0)
+                    {
+                        _selector.Check(_rayProvider.CreateRay(), _redPieceTag);
+
+                        _currentSelection = _selector.GetSelection();
+                        if (_currentSelection != null)
+                        {
+                            _selectionResponse.OnSelect(_currentSelection);
+                            _aimContainer = (GameObject)Instantiate(_aim, _currentSelection.transform);
+                            _aimRenderer = (LineRenderer)_aimContainer.GetComponent(typeof(LineRenderer));
+
+                            switch (State)
+                            {
+                                case GameState.RedTeamSelection:
+                                    State = GameState.RedTeamFire;
+                                    break;
+                                case GameState.BlueTeamSelection:
+                                    State = GameState.BlueTeamFire;
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+
+
+                    //PieceSelectionByPlayer(_redPieceTag);
                     break;
 
                 case GameState.RedTeamFire:
                     _currentState.text = "RedTeam Fire";
                     SetFireInterfaces(true);
+                    if (Application.platform == RuntimePlatform.Android)
+                    {
+                        if(Input.GetKeyDown(KeyCode.Escape)) _exitFireMode.ExitFire();
+                    }
+
+                    if (Input.touchCount > 0)
+                    {
+                        var touch = Input.GetTouch(0);
+                        if (touch.phase == TouchPhase.Began)
+                        {
+
+                            //if (touch.phase == TouchPhase.Moved) return;
+                            _selector.Check(_rayProvider.CreateRay(), _redPieceTag);
+
+                            if (_selector.GetSelection() != null)
+                            {
+                                Debug.Log($"{_selector.GetSelection()}");
+                                _selectionResponse.OnDeselect(_currentSelection);
+                                Destroy(_aimContainer.gameObject);
+                                _currentSelection = _selector.GetSelection();
+                                _selectionResponse.OnSelect(_currentSelection);
+
+                                if (_aimContainer != null)
+                                {
+                                    Destroy(_aimContainer.gameObject);
+                                }
+
+                                _aimContainer = (GameObject) Instantiate(_aim, _currentSelection.transform);
+                                _aimRenderer = (LineRenderer) _aimContainer.GetComponent(typeof(LineRenderer));
+                            }
+                            
+                        }
+                    }
+
+                    //PieceSelectionByPlayer(_redPieceTag);
                     break;
                 
                 case GameState.FromRedToBlue:
@@ -149,6 +218,11 @@ namespace DevJJ.Entertainment.Assets.Scripts
                     switch (_gameMode)
                     {
                         case GameMode.Vs2P:
+                            if (_currentSelection != null)
+                            {
+                                _selectionResponse.OnDeselect(_currentSelection);
+                                Destroy(_aimContainer.gameObject);
+                            }
                             PieceSelectionByPlayer(_bluePieceTag);
                             break;
                         case GameMode.VsCom:
@@ -165,6 +239,10 @@ namespace DevJJ.Entertainment.Assets.Scripts
                     {
                         case GameMode.Vs2P:
                             SetFireInterfaces(true);
+                            if (Application.platform == RuntimePlatform.Android)
+                            {
+                                if (Input.GetKeyDown(KeyCode.Escape)) _exitFireMode.ExitFire();
+                            }
                             break;
                         case GameMode.VsCom:
                             var direction = (_currentTarget.position - _currentSelection.position).normalized;
@@ -234,9 +312,11 @@ namespace DevJJ.Entertainment.Assets.Scripts
             if (State == GameState.BlueTeamFire || State == GameState.RedTeamFire)
             {
                 AimControl();
-                if (Input.touchCount > 0 && !FireButton._buttonPressed) RotateCameraAroundTransform(_currentSelection);
+                if (Input.touchCount > 0 && !FireButton._buttonPressed && !CancelButton._buttonPressed)
+                    _cameraController.FireCameraHandling(_currentSelection);
             }
 
+            _cameraController.MainCameraHandling();
             UpdateScore();
             _redScoreText.text = _redScore.ToString();
             _blueScoreText.text = _blueScore.ToString();
@@ -244,7 +324,7 @@ namespace DevJJ.Entertainment.Assets.Scripts
 
         private void AimControl()
         {
-            _aimDirection = _currentSelection.position - Camera.main.GetComponent<Transform>().position;
+            _aimDirection = _currentSelection.position - _cameraController.GetCurrentCamera().transform.position;
             _aimDirection.y = 0;
             _aimDirection = _aimDirection.normalized * 3;
 
@@ -293,12 +373,6 @@ namespace DevJJ.Entertainment.Assets.Scripts
 
         private void PieceSelectionByPlayer(string selectableTag)
         {
-            if (_currentSelection != null)
-            {
-                _selectionResponse.OnDeselect(_currentSelection);
-                Destroy(_aimContainer.gameObject);
-            }
-
             if (Input.touchCount > 0)
             {
                 _selector.Check(_rayProvider.CreateRay(), selectableTag);
@@ -310,9 +384,20 @@ namespace DevJJ.Entertainment.Assets.Scripts
                     _aimContainer = (GameObject)Instantiate(_aim, _currentSelection.transform);
                     _aimRenderer = (LineRenderer)_aimContainer.GetComponent(typeof(LineRenderer));
 
-                    State = (State == GameState.RedTeamSelection) ? GameState.RedTeamFire : GameState.BlueTeamFire;
+                    switch (State)
+                    {
+                        case GameState.RedTeamSelection:
+                            State = GameState.RedTeamFire;
+                            break;
+                        case GameState.BlueTeamSelection:
+                            State = GameState.BlueTeamFire;
+                            break;
+                        default:
+                            break;
+                    }
                 }
             }
+
         }
 
         private void PieceSelectionByBot()
@@ -363,11 +448,7 @@ namespace DevJJ.Entertainment.Assets.Scripts
                     : GameState.BlueTeamSelection;
         }
 
-        private void RotateCameraAroundTransform(Transform trans)
-        {
-            var touch = Input.GetTouch(0);
-            _mainCamTransform.RotateAround(_currentSelection.position, Vector3.up, touch.deltaPosition.x / 2);
-        }
+        
 
         private void SetFireInterfaces(bool visibility)
         {
@@ -375,29 +456,6 @@ namespace DevJJ.Entertainment.Assets.Scripts
             _canButton.gameObject.SetActive(visibility);
             _gauge.gameObject.SetActive(visibility);
             _gaugeBackground.gameObject.SetActive(visibility);
-        }
-
-        private void InitializeGame()
-        {
-            var piecesInitLocation = new int[10, 2] { { 2, 4 }, { 8, 4 }, { 12, 4 }, { 18, 4 }, { 2, 8 }, { 8, 8 }, { 12, 8 }, { 18, 8 }, { 5, 6 }, { 15, 6 } };
-
-            foreach (var child in _blueContainer.GetComponentsInChildren<Transform>())
-            {
-                if (child.name == _blueContainer.name) continue;
-                Destroy(child.gameObject);
-            }
-
-            foreach (var child in _redContainer.GetComponentsInChildren<Transform>())
-            {
-                if (child.name == _redContainer.name) continue;
-                Destroy(child.gameObject);
-            }
-
-            for (var i = 0; i < piecesInitLocation.GetLength(0); i++)
-            {
-                Instantiate(_redPiece, _redContainer.transform.position + new Vector3(piecesInitLocation[i, 0], 0, -piecesInitLocation[i, 1]), Quaternion.identity, _redContainer.transform);
-                Instantiate(_bluePiece, _blueContainer.transform.position + new Vector3(piecesInitLocation[i, 0], 0, piecesInitLocation[i, 1]), Quaternion.identity, _blueContainer.transform);
-            }
         }
     }
 }

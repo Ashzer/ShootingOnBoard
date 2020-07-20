@@ -8,7 +8,6 @@ namespace DevJJ.Entertainment.Assets.Scripts
 
         public void Check(Ray ray, string selectableTag)
         {
-
             this.selection = null;
             if (Physics.Raycast(ray, out var hit))
             {

@@ -4,9 +4,14 @@ namespace DevJJ.Entertainment.Assets.Scripts
 {
     class TouchScreenRayProvider : MonoBehaviour, IRayProvider
     {
+        private CameraController _cameraController;
+        private void Start()
+        {
+            _cameraController = CameraController.Instance;
+        }
         public Ray CreateRay()
         {
-            return Camera.main.ScreenPointToRay(Input.GetTouch(0).position);
+            return _cameraController.GetCurrentCamera().ScreenPointToRay(Input.GetTouch(0).position);
         }
     }
 }
